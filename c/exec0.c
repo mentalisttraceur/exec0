@@ -282,7 +282,7 @@ int main(int argc, char * * argv)
  argv += 1;
  
  execvp(arg, argv);
- /* if we're here, execvp failed to even execute the command */
+ /* If we're here, execvp failed to even execute the command. */
  
  return error_execFailure(arg);
 }
