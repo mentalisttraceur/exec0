@@ -177,6 +177,63 @@ void writeErrorMsgOfAnySize(struct iovec * msgParts, size_t msgPartsCount)
 }
 
 
+/* The actions to take in responce to explicitly requested "--help". */
+int help()
+{
+ /* If writing the help text fails, report the error and exit accordingly. */
+ int err = writeUntilError(STDOUT_FILENO, helpText, sizeof(helpText) - 1);
+ if(err)
+ {
+  /* Get error string, the compose and print the error message with it. */
+  char * errStr = strerror(err);
+  struct iovec errMsg[3];
+  errMsg[0].iov_base = (void * )stdoutWritingError;
+  errMsg[0].iov_len = sizeof(stdoutWritingError) - 1;
+  errMsg[1].iov_base = errStr;
+  errMsg[1].iov_len = strlen(errStr);
+  errMsg[2].iov_base = (void * )&newline;
+  errMsg[2].iov_len = 1;
+  writev(STDERR_FILENO, errMsg, 3);
+  return EXIT_FAILURE;
+ }
+ /* Successfully printed help info; exit accordingly. */
+ return EXIT_SUCCESS;
+}
+
+
+/* The action taken when there's no actionable arguments given. */
+int error_noArguments()
+{
+ /* Construct error message including help text. */
+ struct iovec errMsg[2];
+ errMsg[0].iov_base = (void * )noArgumentsGiven;
+ errMsg[0].iov_len = sizeof(noArgumentsGiven) - 1;
+ errMsg[1].iov_base = (void * )helpText;
+ errMsg[1].iov_len = sizeof(helpText) - 1;
+ writev(STDERR_FILENO, errMsg, 2);
+ return EXIT_FAILURE;
+}
+
+
+/* The action taken when executing the given command fails. */
+int error_execFailure(char * command)
+{
+ char * errStr = strerror(errno);
+ struct iovec errMsg[5];
+ errMsg[0].iov_base = (void * )msgHeader;
+ errMsg[0].iov_len = sizeof(msgHeader) - 1;
+ errMsg[1].iov_base = command;
+ errMsg[1].iov_len = strlen(command);
+ errMsg[2].iov_base = (void * )colonSpaceSplit;
+ errMsg[2].iov_len = sizeof(colonSpaceSplit) - 1;
+ errMsg[3].iov_base = errStr;
+ errMsg[3].iov_len = strlen(errStr);
+ errMsg[4].iov_base = (void * )&newline;
+ errMsg[4].iov_len = 1;
+ writeErrorMsgOfAnySize(errMsg, 5);
+ return EXIT_FAILURE;
+}
+
 int main(int argc, char * * argv)
 {
  char * arg;
@@ -187,14 +244,7 @@ int main(int argc, char * * argv)
  \*/
  if(argc < 2)
  {
-  /* Construct error message including help text. */
-  struct iovec errMsg[2];
-  errMsg[0].iov_base = (void * )noArgumentsGiven;
-  errMsg[0].iov_len = sizeof(noArgumentsGiven) - 1;
-  errMsg[1].iov_base = (void * )helpText;
-  errMsg[1].iov_len = sizeof(helpText) - 1;
-  writev(STDERR_FILENO, errMsg, 2);
-  return EXIT_FAILURE;
+  return error_noArguments();
  }
  
  /* We slide the start of argv past argv[0], because argv[0] is unused. */
@@ -206,24 +256,7 @@ int main(int argc, char * * argv)
  /* ..the help-printing option: */
  if(!strcmp(arg, "-h") || !strcmp(arg, "--help"))
  {
-  /* If writing the help text fails, report the error and exit accordingly. */
-  int err = writeUntilError(STDOUT_FILENO, helpText, sizeof(helpText) - 1);
-  if(err)
-  {
-   /* Get error string, the compose and print the error message with it. */
-   char * errStr = strerror(err);
-   struct iovec errMsg[3];
-   errMsg[0].iov_base = (void * )stdoutWritingError;
-   errMsg[0].iov_len = sizeof(stdoutWritingError) - 1;
-   errMsg[1].iov_base = errStr;
-   errMsg[1].iov_len = strlen(errStr);
-   errMsg[2].iov_base = (void * )&newline;
-   errMsg[2].iov_len = 1;
-   writev(STDERR_FILENO, errMsg, 3);
-   return EXIT_FAILURE;
-  }
-  /* Successfully printed help info; exit accordingly. */
-  return EXIT_SUCCESS;
+  return help();
  }
  
  /* .. or arg is the "end of options" argument: */
@@ -243,20 +276,7 @@ int main(int argc, char * * argv)
  argv += 1;
  
  execvp(arg, argv);
- /* if we're here, execvp failed */
+ /* if we're here, execvp failed to even execute the command */
  
- char * errStr = strerror(errno);
- struct iovec errMsg[5];
- errMsg[0].iov_base = (void * )msgHeader;
- errMsg[0].iov_len = sizeof(msgHeader) - 1;
- errMsg[1].iov_base = arg;
- errMsg[1].iov_len = strlen(arg);
- errMsg[2].iov_base = (void * )colonSpaceSplit;
- errMsg[2].iov_len = sizeof(colonSpaceSplit) - 1;
- errMsg[3].iov_base = errStr;
- errMsg[3].iov_len = strlen(errStr);
- errMsg[4].iov_base = (void * )&newline;
- errMsg[4].iov_len = 1;
- writeErrorMsgOfAnySize(errMsg, 5);
- return EXIT_FAILURE;
+ return error_execFailure(arg);
 }
