@@ -268,6 +268,11 @@ int main(int argc, char * * argv)
   \*/
   argv += 1;
   arg = *argv;
+  /* But a "--" with no consequent arguments is the same as (argc < 2): */
+  if(!arg)
+  {
+   return error_noArguments();
+  }
  }
  
  /* ..the command to actually invoke is in "arg" if we're here. */
