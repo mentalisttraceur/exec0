@@ -142,7 +142,8 @@ void writeErrorMsgOfAnySize(struct iovec * msgParts, size_t msgPartsCount)
    if(temp.remainder)
    {
     /* ..adjust the pointer forward by the amount we just printed: */
-    msgParts[msgParts_i].iov_base += msgPartSize;
+    msgParts[msgParts_i].iov_base
+    = (char * )(msgParts[msgParts_i].iov_base) + msgPartSize;
     /* ..and set the size to that of portion remaining to print: */
     msgParts[msgParts_i].iov_len = temp.remainder;
    }
