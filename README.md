@@ -30,8 +30,7 @@ those are pedantic corner-cases: the majority of the benefits apply to every
 
 #### Benefits of Multiple Implementations
 
-1. The primary benefit is you can take whichever implementation is easiest for you
-to install.
+1. You can take whichever implementation is easiest for you to install.
 
 2. We can take all of the interpreted languages' `exec0` implementations, and
 roll them up into a polyfill for Bourne shell `exec` `-a` and `-l` options,
