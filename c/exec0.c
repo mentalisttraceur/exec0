@@ -179,7 +179,6 @@ void writeErrorMsgOfAnySize(struct iovec * msgParts, size_t msgPartsCount)
 
 int main(int argc, char * * argv)
 {
- char c;
  char * arg;
  
  /*\
