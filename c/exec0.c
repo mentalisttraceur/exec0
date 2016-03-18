@@ -31,6 +31,7 @@
 #include <sys/uio.h> /* struct iovec, writev */
 
 
+char const version[] = "1.0.0";
 char const stdoutWritingError[] = "exec0: error writing to stdout: ";
 char const msgHeader[] = "exec0: ";
 char const colonSpaceSplit[] = ": ";
@@ -196,28 +197,28 @@ void writeErrorMsgOfAnySize (struct iovec * msg, unsigned int msgPartsToWrite)
 }
 
 
-/* The actions to take in responce to explicitly requested "--help". */
+/* Write to stdout, if that fails write error to stderr. */
 static
-int help()
+int writeStdOut_reportIfError(char const * buf, size_t len)
 {
- /* If writing the help text fails, report the error and exit accordingly. */
- int err = writeUntilError(STDOUT_FILENO, helpText, sizeof(helpText) - 1);
- if(err)
+ int err = writeUntilError(STDOUT_FILENO, buf, len);
+ if(!err)
  {
-  /* Get error string, the compose and print the error message with it. */
-  char * errStr = strerror(err);
-  struct iovec errMsg[3];
-  errMsg[0].iov_base = (void * )stdoutWritingError;
-  errMsg[0].iov_len = sizeof(stdoutWritingError) - 1;
-  errMsg[1].iov_base = errStr;
-  errMsg[1].iov_len = strlen(errStr);
-  errMsg[2].iov_base = (void * )&newline;
-  errMsg[2].iov_len = 1;
-  writev(STDERR_FILENO, errMsg, 3);
-  return EXIT_FAILURE;
+  /* Successfully wrote to stdout, just return. */
+  return EXIT_SUCCESS;
  }
- /* Successfully printed help info; exit accordingly. */
- return EXIT_SUCCESS;
+ 
+ /* Write failed: get error string, then compose and print the error message. */
+ char * errStr = strerror(err);
+ struct iovec errMsg[3];
+ errMsg[0].iov_base = (void * )stdoutWritingError;
+ errMsg[0].iov_len = sizeof(stdoutWritingError) - 1;
+ errMsg[1].iov_base = errStr;
+ errMsg[1].iov_len = strlen(errStr);
+ errMsg[2].iov_base = (void * )&newline;
+ errMsg[2].iov_len = 1;
+ writev(STDERR_FILENO, errMsg, 3);
+ return EXIT_FAILURE;
 }
 
 
@@ -279,7 +280,12 @@ int main(int argc, char * * argv)
  /* ..the help-printing option: */
  if(!strcmp(arg, "-h") || !strcmp(arg, "--help"))
  {
-  return help();
+  return writeStdOut_reportIfError(helpText, sizeof(helpText) -1);
+ }
+ /* .. the version printing option: */
+ if(!strcmp(arg, "-V") || !strcmp(arg, "--version"))
+ {
+  return writeStdOut_reportIfError(version, sizeof(version) -1);
  }
  
  /* .. or arg is the "end of options" argument: */
