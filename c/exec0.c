@@ -97,83 +97,101 @@ limit too. Basically, it depends on if ARG_MAX is close to or bigger than
 SSIZE_MAX. Anyway, I strongly believe in accounting for possible problems
 unless there's sound evidence that it's definitely unnecessary.
 
-No error-checking is done because if writing the error message fails, what's
-next? Try to report an error about how we can't report errors? (We could set a
-different exitcode, but we already set it to indicate failure if we're printing
-an error, so at the moment that seems to be low-value).
+No response to errors (besides the EINVAL due to too large of a write chunk) is
+done because if writing the error message fails, what's next? Try to report an
+error about how we can't report errors? (We could exit with a different status
+code, but we already set it to indicate failure if we're printing an error, so
+that seems to be low-value).
 \*/
-void writeErrorMsgOfAnySize(struct iovec * msgParts, size_t msgPartsCount)
+void writeErrorMsgOfAnySize
+(struct iovec * msg, unsigned int msgPartsToWrite)
 {
  /*\
- We need to track how much data is left to write across iterations, and when at
- that limit, we need to briefly hold the difference/remainder in how much a
- message part has left and how much we can still fit in a write. Using a union
- lets us use one temporary ssize_t variable, but two meaningful names for it.
+ We really only need two temporary variables: they have semantically different
+ but related purposes at different parts of the code. Unions let us use two
+ names for each, making the meaning of the values held clearer.
+ \*/
+ 
+ /*\
+ Either the length of data remaining in the previously partially-writen message
+ part, or the length of all parts as we count up to the maximum writev length.
  \*/
  union
  {
-  ssize_t spaceLeft;
-  ssize_t remainder;
+  size_t remainder;
+  size_t total;
  }
- temp;
- 
- /* At the beginning, we have the full maximum space available for a writev: */
- temp.spaceLeft = SSIZE_MAX;
- 
- unsigned int msgParts_i = 0;
- while(msgParts_i < msgPartsCount)
+ len;
+
+ /*\
+ Either the index into the message part array or the count of how many parts
+ are to be written in the current writev attempt.
+ \*/
+ union
  {
-  size_t msgPartSize = msgParts[msgParts_i].iov_len;
-  if(msgPartSize >= temp.spaceLeft)
-  {
-   /* Reached limit of one writev. Compute remaining length in current part: */
-   temp.remainder = msgPartSize - temp.spaceLeft;
-   
-   /* Set the current part length to the amount that fits, and do the write: */
-   msgPartSize -= temp.remainder;
-   msgParts[msgParts_i].iov_len = msgPartSize;
-   if(writev(STDERR_FILENO, msgParts, msgParts_i + 1) == -1)
-   {
-    /* If a write error happened, just bail, no point writing more. */
-    return;
-   }
-   
-   /* If there's any remainder unwritten in this message part... */
-   if(temp.remainder)
-   {
-    /* ..adjust the pointer forward by the amount we just printed: */
-    msgParts[msgParts_i].iov_base
-    = (char * )(msgParts[msgParts_i].iov_base) + msgPartSize;
-    /* ..and set the size to that of portion remaining to print: */
-    msgParts[msgParts_i].iov_len = temp.remainder;
-   }
-   else /* !temp.remainder */
-   {
-    /* Increment index past this message part because it's "used up". */
-    msgParts_i += 1;
-   }
-   /* Reset spaceLeft back to the (full) remaining max length for writev */
-   temp.spaceLeft = SSIZE_MAX;
-   /* Adjust message parts variables to point past the fully-written parts. */
-   msgParts += msgParts_i;
-   msgPartsCount -= msgParts_i;
-   /* Index has to be reset too, since we just incremented msgParts */
-   msgParts_i = 0;
-  }
-  else /* msgPartSize < temp.spaceLeft */
-  {
-   /* In the normal case we just increment the index... */
-   msgParts_i += 1;
-   /* ..and decrement the space left */
-   temp.spaceLeft -= msgPartSize;
-  }
+  unsigned int i;
+  unsigned int count;
  }
+ part;
  
- /* If there's any unwritten parts after the loop, do the final write. */
- if(msgPartsCount)
+ /* When we start, there is no "remainder from a previously written part": */
+ len.remainder = 0;
+ /* First write optimistically attempts to write the entire message: */
+ part.count = msgPartsToWrite;
+ 
+ do
  {
-  writev(STDERR_FILENO, msgParts, msgPartsCount);
+  /* errno is set when we get here: resetting it makes it meaningful later: */
+  errno = 0;
+  
+  if(writev(STDERR_FILENO, msg, part.count) != -1
+  && (part.count < msgPartsToWrite || len.remainder))
+  {
+   /*\
+   If writev succeeded _and_ we have something left (should only happen on the
+   even iterations) we set up another full-write of the remaining message.
+   \*/
+   if(len.remainder)
+   {
+    /* Move i back to point at the partially-written message part: */
+    part.i = part.count - 1;
+    /* Move pointer forward and set length to just the unwritten remainder: */
+    msg[part.i].iov_base = (char * )(msg[part.i].iov_base) + len.remainder;
+    msg[part.i].iov_len = len.remainder;
+    /* And now that we've accounted for the remainder, reset the variable: */
+    len.remainder = 0;
+   }
+   /* Adjust values for the next write to cover just the unwritten parts: */
+   msg += part.i;
+   msgPartsToWrite -= part.i;
+   part.count = msgPartsToWrite;
+   continue;
+  }
+  /* EINVAL will be raised if the total message length was too big: */
+  if(errno == EINVAL)
+  {
+   /* Invariant: len.remainder == 0 == (what we want len.total to be) */
+   for(part.i = 0; len.total < SSIZE_MAX; part.i += 1)
+   {
+    if(part.i == msgPartsToWrite)
+    {
+     /* We only get here if EINVAL was raised for some other reason. */
+     return;
+    }
+    len.total += msg[part.i].iov_len;
+   }
+   len.remainder = len.total - SSIZE_MAX;
+   msg[part.i - 1].iov_len -= len.remainder;
+   /* part.count == part.i == the number of parts we can write at once. */
+   continue;
+  }
+  /*\
+  If writev had neither of the above two cases of results, we're done. Either
+  it succeeded with nothing left to write, or it had another error as we tried
+  to print this error message, and there's no really useful way to handle that.
+  \*/
  }
+ while(0);
 }
 
 
