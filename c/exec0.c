@@ -58,6 +58,7 @@ that are immediately apparent (e.g. bad file descriptor), and twice for most
 other errors: even transient errors (e.g. full pipe) are unlikely to disappear
 in the time window between two iterations of this loop.
 \*/
+static
 int writeUntilError(int fd, void const * buf, size_t count)
 {
  do
@@ -103,8 +104,8 @@ error about how we can't report errors? (We could exit with a different status
 code, but we already set it to indicate failure if we're printing an error, so
 that seems to be low-value).
 \*/
-void writeErrorMsgOfAnySize
-(struct iovec * msg, unsigned int msgPartsToWrite)
+static
+void writeErrorMsgOfAnySize (struct iovec * msg, unsigned int msgPartsToWrite)
 {
  /*\
  We really only need two temporary variables: they have semantically different
@@ -196,6 +197,7 @@ void writeErrorMsgOfAnySize
 
 
 /* The actions to take in responce to explicitly requested "--help". */
+static
 int help()
 {
  /* If writing the help text fails, report the error and exit accordingly. */
@@ -220,6 +222,7 @@ int help()
 
 
 /* The action taken when there's no actionable arguments given. */
+static
 int error_noArguments()
 {
  /* Construct error message including help text. */
@@ -234,6 +237,7 @@ int error_noArguments()
 
 
 /* The action taken when executing the given command fails. */
+static
 int error_execFailure(char * command)
 {
  char * errStr = strerror(errno);
