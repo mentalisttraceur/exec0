@@ -106,7 +106,7 @@ code, but we already set it to indicate failure if we're printing an error, so
 that seems to be low-value).
 \*/
 static
-void writeErrorMsgOfAnySize (struct iovec * msg, unsigned int msgPartsToWrite)
+void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
 {
  /*\
  We really only need two temporary variables: they have semantically different
