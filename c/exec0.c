@@ -41,7 +41,7 @@ char const newline = '\n';
 char const helpText[] =
  "Usage: exec0 OPTION|COMMAND [NAME [ARGUMENT]...]\n"
  "\n"
- "Execute a command, specifying all arguments to pass to it, include the\n"
+ "Execute a command, specifying all arguments to pass to it, including the\n"
  "name the command sees itself invoked as (the \"zeroth\" argument).\n"
  "\n"
  "  -h, --help    Print this help text and exit.\n"
