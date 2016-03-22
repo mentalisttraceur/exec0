@@ -1,8 +1,8 @@
 # exec0
 
 exec0 is a small project born as a workaround for the fact that shell scripts
-generally have no way to execute another program with explicitly control over
-the zeroth argument (the name that the program sees itself invoked as).
+generally have no way to execute another program with explicit control over the
+zeroth argument (the name that the program sees itself invoked as).
 
 
 ## Goal
