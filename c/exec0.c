@@ -31,7 +31,7 @@
 #include <sys/uio.h> /* struct iovec, writev */
 
 
-char const version[] = "1.0.0";
+char const version[] = "1.0.0\n";
 char const stdoutWritingError[] = "exec0: error writing to stdout: ";
 char const msgHeader[] = "exec0: ";
 char const colonSpaceSplit[] = ": ";
