@@ -45,6 +45,7 @@ char const helpText[] =
  "name the command sees itself invoked as (the \"zeroth\" argument).\n"
  "\n"
  "  -h, --help    Print this help text and exit.\n"
+ "  -V, --version Print version information and exit.\n"
 ;
 
 
