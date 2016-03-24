@@ -37,8 +37,9 @@ char const colonSpaceSplit[] = ": ";
 char const noArgumentsGiven[] = ": need command or option argument\n";
 char const newline = '\n';
 
+char const helpTextPrefix[] = "Usage:";
 char const helpText[] =
- "Usage: exec0 OPTION|COMMAND [NAME [ARGUMENT]...]\n"
+ " OPTION|COMMAND [NAME [ARGUMENT]...]\n"
  "\n"
  "Execute a command, specifying all arguments to pass to it, including the\n"
  "name the command sees itself invoked as (the \"zeroth\" argument).\n"
@@ -247,7 +248,7 @@ int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
   return EXIT_SUCCESS;
  }
  
- /* Write failed: get error string, then compose and print the error message. */
+ /* Write failed: get error string, then compose and print error message. */
  char * errStr = strerror(err);
  struct iovec errMsg[4];
  errMsg[0] = basename(arg0);
@@ -266,22 +267,18 @@ int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
 static
 int error_noArguments(char * arg0)
 {
- /* Construct error message including help text. */
- struct iovec errMsg[3];
+ /* Construct error message including help text: */
+ struct iovec errMsg[5];
+ errMsg[0] = basename(arg0);
  errMsg[1].iov_base = (void * )noArgumentsGiven;
  errMsg[1].iov_len = sizeof(noArgumentsGiven) - 1;
- errMsg[2].iov_base = (void * )helpText;
- errMsg[2].iov_len = sizeof(helpText) - 1;
+ errMsg[2].iov_base = (void * )helpTextPrefix;
+ errMsg[2].iov_len = sizeof(helpTextPrefix) - 1;
+ errMsg[3] = errMsg[0];
+ errMsg[4].iov_base = (void * )helpText;
+ errMsg[4].iov_len = sizeof(helpText) - 1;
 
- if(arg0)
- {
-  errMsg[0] = basename(arg0);
-  writev(STDERR_FILENO, errMsg, 3);
- }
- else
- {
-  writev(STDERR_FILENO, errMsg + 1, 2);
- }
+ writev(STDERR_FILENO, errMsg, 5);
  return EXIT_FAILURE;
 }
 
@@ -318,6 +315,11 @@ int main(int argc, char * * argv)
  \*/
  if(argc < 2)
  {
+  if(!arg0)
+  {
+   /* If we don't even have arg0, we let the error print it as a blank arg0. */
+   arg0 = "";
+  }
   return error_noArguments(arg0);
  }
  
