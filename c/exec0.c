@@ -50,6 +50,45 @@ char const helpText[] =
 
 
 /*\
+A basename function which does specifically what this program needs: returns an
+"iovec" struct for use with writev. Does _not_ check for a null argument.
+\*/
+static
+struct iovec basename(char const * str)
+{
+ struct iovec basename;
+ char c;
+ 
+ /*\
+ This logic returns the same blank basename whether given a blank string, or if
+ given a non-blank string where the last character is the path separator. This
+ is not what the POSIX basename function does, but it's what's appropriate for
+ the exec0 usecase of printing messages using the invoked name.
+ \*/
+ basename.iov_base = (void * )str;
+ /* One scan gets both the start address, and (implicitly) the length. */
+ while(c = *str)
+ {
+  str += 1;
+  /*\
+  Address increments before check, so it points behind the path separator,
+  which is the correct spot.
+  \*/
+  if(c == '/')
+  {
+   basename.iov_base = (void * )str;
+  }
+ }
+ /*\
+ Compute length of basename from the difference between the pointer to the
+ terminating null, and the pointer to the start of the basename.
+ \*/
+ basename.iov_len = str - (char const * )basename.iov_base;
+ return basename;
+}
+
+
+/*\
 write() can succeed, succeed partially then "fail", or just fail. However, if
 it succeeds partially, we don't get any indication of an error. So we call it
 in a loop: We want to relay a useful error message to the user if their write
