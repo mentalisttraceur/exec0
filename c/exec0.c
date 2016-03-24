@@ -32,10 +32,9 @@
 
 
 char const version[] = "1.0.0\n";
-char const stdoutWritingError[] = "exec0: error writing to stdout: ";
-char const msgHeader[] = "exec0: ";
+char const stdoutWritingError[] = ": error writing to stdout: ";
 char const colonSpaceSplit[] = ": ";
-char const noArgumentsGiven[] = "exec0: need command or option argument\n";
+char const noArgumentsGiven[] = ": need command or option argument\n";
 char const newline = '\n';
 
 char const helpText[] =
@@ -239,7 +238,7 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
 
 /* Write to stdout, if that fails write error to stderr. */
 static
-int writeStdOut_reportIfError(char const * buf, size_t len)
+int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
 {
  int err = writeUntilError(STDOUT_FILENO, buf, len);
  if(!err)
@@ -250,50 +249,60 @@ int writeStdOut_reportIfError(char const * buf, size_t len)
  
  /* Write failed: get error string, then compose and print the error message. */
  char * errStr = strerror(err);
- struct iovec errMsg[3];
- errMsg[0].iov_base = (void * )stdoutWritingError;
- errMsg[0].iov_len = sizeof(stdoutWritingError) - 1;
- errMsg[1].iov_base = errStr;
- errMsg[1].iov_len = strlen(errStr);
- errMsg[2].iov_base = (void * )&newline;
- errMsg[2].iov_len = 1;
- writev(STDERR_FILENO, errMsg, 3);
+ struct iovec errMsg[4];
+ errMsg[0] = basename(arg0);
+ errMsg[1].iov_base = (void * )stdoutWritingError;
+ errMsg[1].iov_len = sizeof(stdoutWritingError) - 1;
+ errMsg[2].iov_base = errStr;
+ errMsg[2].iov_len = strlen(errStr);
+ errMsg[3].iov_base = (void * )&newline;
+ errMsg[3].iov_len = 1;
+ writev(STDERR_FILENO, errMsg, 4);
  return EXIT_FAILURE;
 }
 
 
 /* The action taken when there's no actionable arguments given. */
 static
-int error_noArguments()
+int error_noArguments(char * arg0)
 {
  /* Construct error message including help text. */
- struct iovec errMsg[2];
- errMsg[0].iov_base = (void * )noArgumentsGiven;
- errMsg[0].iov_len = sizeof(noArgumentsGiven) - 1;
- errMsg[1].iov_base = (void * )helpText;
- errMsg[1].iov_len = sizeof(helpText) - 1;
- writev(STDERR_FILENO, errMsg, 2);
+ struct iovec errMsg[3];
+ errMsg[1].iov_base = (void * )noArgumentsGiven;
+ errMsg[1].iov_len = sizeof(noArgumentsGiven) - 1;
+ errMsg[2].iov_base = (void * )helpText;
+ errMsg[2].iov_len = sizeof(helpText) - 1;
+
+ if(arg0)
+ {
+  errMsg[0] = basename(arg0);
+  writev(STDERR_FILENO, errMsg, 3);
+ }
+ else
+ {
+  writev(STDERR_FILENO, errMsg + 1, 2);
+ }
  return EXIT_FAILURE;
 }
 
 
 /* The action taken when executing the given command fails. */
 static
-int error_execFailure(char * command)
+int error_execFailure(char * command, char * arg0)
 {
  char * errStr = strerror(errno);
- struct iovec errMsg[5];
- errMsg[0].iov_base = (void * )msgHeader;
- errMsg[0].iov_len = sizeof(msgHeader) - 1;
- errMsg[1].iov_base = command;
- errMsg[1].iov_len = strlen(command);
- errMsg[2].iov_base = (void * )colonSpaceSplit;
- errMsg[2].iov_len = sizeof(colonSpaceSplit) - 1;
- errMsg[3].iov_base = errStr;
- errMsg[3].iov_len = strlen(errStr);
- errMsg[4].iov_base = (void * )&newline;
- errMsg[4].iov_len = 1;
- writeErrorMsgOfAnySize(errMsg, 5);
+ struct iovec errMsg[6];
+ errMsg[0] = basename(arg0);
+ errMsg[1].iov_base = (void * )colonSpaceSplit;
+ errMsg[1].iov_len = sizeof(colonSpaceSplit) - 1;
+ errMsg[2].iov_base = command;
+ errMsg[2].iov_len = strlen(command);
+ errMsg[3] = errMsg[1];
+ errMsg[4].iov_base = errStr;
+ errMsg[4].iov_len = strlen(errStr);
+ errMsg[5].iov_base = (void * )&newline;
+ errMsg[5].iov_len = 1;
+ writeErrorMsgOfAnySize(errMsg, 6);
  return EXIT_FAILURE;
 }
 
@@ -301,6 +310,7 @@ int error_execFailure(char * command)
 int main(int argc, char * * argv)
 {
  char * arg;
+ char * arg0 = *argv;
  
  /*\
  There must be at least one argument (so two, counting argv[0]), to know what
@@ -308,7 +318,7 @@ int main(int argc, char * * argv)
  \*/
  if(argc < 2)
  {
-  return error_noArguments();
+  return error_noArguments(arg0);
  }
  
  /* We slide the start of argv past argv[0], because argv[0] is unused. */
@@ -320,12 +330,12 @@ int main(int argc, char * * argv)
  /* ..the help-printing option: */
  if(!strcmp(arg, "-h") || !strcmp(arg, "--help"))
  {
-  return writeStdOut_reportIfError(helpText, sizeof(helpText) -1);
+  return writeStdOut_reportIfError(helpText, sizeof(helpText) -1, arg0);
  }
  /* .. the version printing option: */
  if(!strcmp(arg, "-V") || !strcmp(arg, "--version"))
  {
-  return writeStdOut_reportIfError(version, sizeof(version) -1);
+  return writeStdOut_reportIfError(version, sizeof(version) -1, arg0);
  }
  
  /* .. or arg is the "end of options" argument: */
@@ -340,7 +350,7 @@ int main(int argc, char * * argv)
   /* But a "--" with no consequent arguments is the same as (argc < 2): */
   if(!arg)
   {
-   return error_noArguments();
+   return error_noArguments(arg0);
   }
  }
  
@@ -352,5 +362,5 @@ int main(int argc, char * * argv)
  execvp(arg, argv);
  /* If we're here, execvp failed to even execute the command. */
  
- return error_execFailure(arg);
+ return error_execFailure(arg, arg0);
 }
