@@ -96,6 +96,14 @@ struct iovec basename(char const * str)
 }
 
 
+static
+void iovec_increment(struct iovec * iov, size_t increment)
+{
+ (*iov).iov_base = (char * )(*iov).iov_base + increment;
+ (*iov).iov_len -= increment;
+}
+
+
 /*\
 write() can succeed, succeed partially then "fail", or just fail. However, if
 it succeeds partially, we don't get any indication of an error. So we call it
@@ -201,8 +209,7 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
     /* Move i back to point at the partially-written message part: */
     part.i = part.count - 1;
     /* Move pointer forward and set length to just the unwritten remainder: */
-    msg[part.i].iov_base = (char * )(msg[part.i].iov_base) + len.remainder;
-    msg[part.i].iov_len = len.remainder;
+    iovec_increment(msg + part.i, len.remainder);
     /* And now that we've accounted for the remainder, reset the variable: */
     len.remainder = 0;
    }
