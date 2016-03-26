@@ -116,26 +116,31 @@ other errors: even transient errors (e.g. full pipe) are unlikely to disappear
 in the time window between two iterations of this loop.
 \*/
 static
-int writeUntilError(int fd, void const * buf, size_t count)
+size_t write2(int fd, void const * buf, size_t count)
 {
- do
+ size_t written = 0;
+ for(;;)
  {
   ssize_t result = write(1, buf, count);
   if(result == -1)
   {
-   return errno;
+   return written;
   }
  #ifndef EXPECT_POSIX_WRITE_SEMANTICS
   if(!result && count)
   {
-   return EAGAIN;
+   errno = EAGAIN;
+   return written;
   }
  #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
-  count -= result;
+  written += result;
+  if(written == count)
+  {
+   return written;
+  }
   buf = (char * )buf + result;
  }
- while(count);
- return 0;
+ /* We should never reach here. */
 }
 
 
@@ -251,15 +256,15 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
 static
 int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
 {
- int err = writeUntilError(STDOUT_FILENO, buf, len);
- if(!err)
+ size_t result = write2(STDOUT_FILENO, buf, len);
+ if(!errno)
  {
   /* Successfully wrote to stdout, just return. */
   return EXIT_SUCCESS;
  }
  
  /* Write failed: get error string, then compose and print error message. */
- char * errStr = strerror(err);
+ char * errStr = strerror(errno);
  struct iovec errMsg[4];
  errMsg[0] = basename(arg0);
  errMsg[1].iov_base = (void * )stdoutWritingError;
