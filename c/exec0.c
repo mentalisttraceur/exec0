@@ -256,11 +256,21 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
 static
 int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
 {
- size_t result = write2(STDOUT_FILENO, buf, len);
- if(!errno)
+ for(;;)
  {
-  /* Successfully wrote to stdout, just return. */
-  return EXIT_SUCCESS;
+  size_t result = write2(STDOUT_FILENO, buf, len);
+  if(!errno)
+  {
+   /* Successfully wrote to stdout, just return. */
+   return EXIT_SUCCESS;
+  }
+  if(errno != EINTR)
+  {
+   break;
+  }
+  errno = 0;
+  len -= result;
+  buf += result;
  }
  
  /* Write failed: get error string, then compose and print error message. */
