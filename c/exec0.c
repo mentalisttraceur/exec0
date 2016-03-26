@@ -15,6 +15,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 \*****************************************************************************/
 
+/*\
+The write (and writev?) syscall(s) on many "historical" systems returned 0
+where modern systems return -1 with errno set to EAGAIN/EWOULDBLOCK. This code
+handles both, but when compiling on a system with modern write semantics, you
+can define the preprocessor macro EXPECT_POSIX_WRITE_SEMANTICS - this will save
+a couple of branches in the final machine code, for what little that's worth.
+\*/
+
 /* This must be defined for limits.h to include SSIZE_MAX */
 #define _POSIX_C_SOURCE 1
 
@@ -109,17 +117,12 @@ int writeUntilError(int fd, void const * buf, size_t count)
   {
    return errno;
   }
- #ifdef SUPPORT_HISTORICAL_WRITE_SEMANTICS
-  /*\
-  Some "historical" systems returned 0 where modern systems do -1 with errno
-  set to EAGAIN/EWOULDBLOCK. The following if-statement accounts for the old
-  way, while being compatible with modern specifications.
-  \*/
+ #ifndef EXPECT_POSIX_WRITE_SEMANTICS
   if(!result && count)
   {
    return EAGAIN;
   }
- #endif /* SUPPORT_HISTORICAL_WRITE_SEMANTICS */ 
+ #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
   count -= result;
   buf = (char * )buf + result;
  }
