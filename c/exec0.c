@@ -37,7 +37,7 @@ char const colonSpaceSplit[] = ": ";
 char const noArgumentsGiven[] = ": need command or option argument\n";
 char const newline = '\n';
 
-char const helpTextPrefix[] = "Usage:";
+char const helpTextPrefix[] = "Usage: ";
 char const helpText[] =
  " OPTION|COMMAND [NAME [ARGUMENT]...]\n"
  "\n"
