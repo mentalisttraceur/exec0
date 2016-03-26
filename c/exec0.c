@@ -118,10 +118,12 @@ in the time window between two iterations of this loop.
 static
 size_t write2(int fd, void const * buf, size_t count)
 {
- size_t written = 0;
- for(;;)
+ size_t written;
+ ssize_t result;
+ 
+ for(written = 0;; buf = (char * )buf + result)
  {
-  ssize_t result = write(1, buf, count);
+  result = write(1, buf, count);
   if(result == -1)
   {
    return written;
@@ -138,7 +140,6 @@ size_t write2(int fd, void const * buf, size_t count)
   {
    return written;
   }
-  buf = (char * )buf + result;
  }
  /* We should never reach here. */
 }
