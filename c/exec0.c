@@ -152,6 +152,70 @@ size_t write2(int fd, void const * buf, size_t count)
 }
 
 
+static
+size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
+{
+ size_t written;
+ ssize_t result;
+ ssize_t skip;
+ struct iovec * changed_iovec = iov;
+ size_t changed_iovec_offset = 0;
+ 
+ for(written = 0;;)
+ {
+  result = writev(fd, iov, iovcnt);
+  if(result == -1)
+  {
+   goto clean_exit;
+  }
+  written += result;
+  /*\
+  All writev implementations I know of error out if "iovcnt" == 0. If there is
+  an implementation which accepts it, and if this program ever changed to call
+  this function with iovcnt == 0, we'll need to check for that and return here.
+  \*/
+  
+  for(skip = result; skip >= iov->iov_len;)
+  {
+   skip -= iov->iov_len;
+   iov += 1;
+   iovcnt -= 1;
+   if(!iovcnt)
+   {
+   #ifndef EXPECT_POSIX_WRITE_SEMANTICS
+    if(!result && skip < result)
+    {
+     errno = EAGAIN;
+    }
+   #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
+    goto clean_exit;
+   }
+  }
+  
+  iovec_unskip(changed_iovec, changed_iovec_offset);
+  if(changed_iovec == iov)
+  {
+   changed_iovec_offset += skip;
+  }
+  else
+  {
+   changed_iovec_offset = skip;
+   changed_iovec = iov;
+  }
+  iovec_skip(iov, changed_iovec_offset);
+ }
+clean_exit:
+ /*\
+ Note that "writev2" must return to restore the iovec array, so a longjmp from
+ a signal handler will misbehave in some cases. I cowardly take refuge in the
+ fact that the "writev" function is not async-signal-safe anyway, and therefore
+ "writev2" does not lose any portable guarantees versus "writev".
+ \*/
+ iovec_unskip(changed_iovec, changed_iovec_offset);
+ return written;
+}
+
+
 /*\
 This function is mainly there to account for the extremely unlikely possibility
 that an error message is too big for SSIZE_MAX. This should never really happen
