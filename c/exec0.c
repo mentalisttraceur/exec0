@@ -112,16 +112,27 @@ void iovec_unskip(struct iovec * iov, size_t offset)
 
 
 /*\
-write() can succeed, succeed partially then "fail", or just fail. However, if
-it succeeds partially, we don't get any indication of an error. So we call it
-in a loop: We want to relay a useful error message to the user if their write
-fails, even after partially succeeding, and the write() API doesn't give us
-the error information when it partially succeeds. It's noteworthy that most of
-the time, this will only call write once in a successful case, once for errors
-that are immediately apparent (e.g. bad file descriptor), and twice for most
-other errors: even transient errors (e.g. full pipe) are unlikely to disappear
-in the time window between two iterations of this loop.
+write() and writev() have an annoying issue: if they succeed partially then hit
+an error, they don't communicate the error reason to the caller. We have to
+call them again to get it. So we have wrappers around write() and writev(),
+called "write2()" and "writev2()", which would behave more properly.
+
+Ideally "write2()" and "writev2()" would exist as actual syscalls with separate
+return values (using two registers or other architecture-appropriate method)
+for the number of bytes written and the encountered error's number, if any.
+The kernel knows why the write only succeeded partially, so it's a shame to do
+two syscalls worth of overhead just to find out the error reason. I imagine a
+libc wrapper would return the former, and set errno with the latter.
+
+The following two functions are wrappers which get that behavior by calling
+write()/writev() in a loop. It's noteworthy that most of the time, this will
+only call the syscall once in a successful case, once for errors that are
+immediately apparent (e.g. bad file descriptor), and only twice for most other
+errors. Even transient errors (e.g. full pipe) are not likely to pass in the
+time window between two iterations of this loop, and if they do, it's arguably
+acceptable to interpret that as there not having been any error at all.
 \*/
+
 static
 size_t write2(int fd, void const * buf, size_t count)
 {
