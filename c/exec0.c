@@ -366,7 +366,7 @@ int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
  errMsg[2].iov_len = strlen(errStr);
  errMsg[3].iov_base = (void * )&newline;
  errMsg[3].iov_len = 1;
- writev(STDERR_FILENO, errMsg, 4);
+ writeErrorMsgOfAnySize(errMsg, 4);
  return EXIT_FAILURE;
 }
 
@@ -385,8 +385,7 @@ int error_noArguments(char * arg0)
  errMsg[3] = errMsg[0];
  errMsg[4].iov_base = (void * )helpText;
  errMsg[4].iov_len = sizeof(helpText) - 1;
-
- writev(STDERR_FILENO, errMsg, 5);
+ writeErrorMsgOfAnySize(errMsg, 5);
  return EXIT_FAILURE;
 }
 
