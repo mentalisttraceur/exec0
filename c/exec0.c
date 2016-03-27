@@ -103,6 +103,13 @@ void iovec_skip(struct iovec * iov, size_t offset)
  iov->iov_len -= offset;
 }
 
+static
+void iovec_unskip(struct iovec * iov, size_t offset)
+{
+ iov->iov_base = (char * )iov->iov_base - offset;
+ iov->iov_len += offset;
+}
+
 
 /*\
 write() can succeed, succeed partially then "fail", or just fail. However, if
