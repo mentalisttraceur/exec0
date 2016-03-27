@@ -99,8 +99,8 @@ struct iovec basename(char const * str)
 static
 void iovec_increment(struct iovec * iov, size_t increment)
 {
- (*iov).iov_base = (char * )(*iov).iov_base + increment;
- (*iov).iov_len -= increment;
+ iov->iov_base = (char * )iov->iov_base + increment;
+ iov->iov_len -= increment;
 }
 
 
