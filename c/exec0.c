@@ -167,56 +167,69 @@ size_t write2(int fd, void const * buf, size_t count)
 static
 size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
 {
- ssize_t result;
- ssize_t skip;
+#ifndef EXPECT_POSIX_WRITE_SEMANTICS
+ struct
+#else
+ union
+#endif /* EXPECT_POSIX_WRITE_SEMANTICS */
+ {
+  ssize_t result;
+  ssize_t skip;
+ }
+ write;
  size_t written;
  size_t changed_iovec_offset;
  struct iovec * changed_iovec;
  
  for(written = 0, changed_iovec = iov, changed_iovec_offset = 0;;)
  {
-  result = writev(fd, iov, iovcnt);
-  if(result == -1)
+  write.result = writev(fd, iov, iovcnt);
+  if(write.result == -1)
   {
-   goto clean_exit;
+   goto clean_return;
   }
-  written += result;
+  written += write.result;
   /*\
   All writev implementations I know of error out if "iovcnt" == 0. If there is
   an implementation which accepts it, and if this program ever changed to call
   this function with iovcnt == 0, we'll need to check for that and return here.
   \*/
   
-  for(skip = result; skip >= iov->iov_len;)
+ #ifndef EXPECT_POSIX_WRITE_SEMANTICS
+  write.skip = write.result;
+ #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
+  while(write.skip >= iov->iov_len)
   {
-   skip -= iov->iov_len;
+   write.skip -= iov->iov_len;
    iov += 1;
    iovcnt -= 1;
    if(!iovcnt)
    {
-   #ifndef EXPECT_POSIX_WRITE_SEMANTICS
-    if(!result && skip < result)
-    {
-     errno = EAGAIN;
-    }
-   #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
-    goto clean_exit;
+    goto clean_return;
    }
   }
+ #ifndef EXPECT_POSIX_WRITE_SEMANTICS
+  if(!write.result)
+  {
+   /* If nothing was written and the above loop didn't exit the function: */
+   errno = EAGAIN;
+   goto clean_return;
+  }
+ #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
   
   iovec_unskip(changed_iovec, changed_iovec_offset);
   if(changed_iovec == iov)
   {
-   changed_iovec_offset += skip;
+   changed_iovec_offset += write.skip;
   }
   else
   {
-   changed_iovec_offset = skip;
+   changed_iovec_offset = write.skip;
    changed_iovec = iov;
   }
   iovec_skip(iov, changed_iovec_offset);
  }
-clean_exit:
+clean_return:
  /*\
  Note that "writev2" must return to restore the iovec array, so a longjmp from
  a signal handler will get a mangled iovec array in some cases. I cowardly take
