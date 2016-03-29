@@ -39,7 +39,7 @@ a couple of branches in the final machine code, for what little that's worth.
 #include <sys/uio.h> /* struct iovec, writev */
 
 
-char const version[] = "1.0.0\n";
+char const versionText[] = "1.0.0\n";
 char const stdoutWritingError[] = ": error writing to stdout: ";
 char const colonSpaceSplit[] = ": ";
 char const noArgumentsGiven[] = ": need command or option argument\n";
@@ -444,7 +444,7 @@ int main(int argc, char * * argv)
  /* .. the version printing option: */
  if(!strcmp(arg, "-V") || !strcmp(arg, "--version"))
  {
-  return writeStdOut_reportIfError(version, sizeof(version) -1, arg0);
+  return writeStdOut_reportIfError(versionText, sizeof(versionText) -1, arg0);
  }
  
  /* .. or arg is the "end of options" argument: */
