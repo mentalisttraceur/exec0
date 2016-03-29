@@ -141,7 +141,7 @@ size_t write2(int fd, void const * buf, size_t count)
  
  for(written = 0;; buf = (char * )buf + result)
  {
-  result = write(1, buf, count);
+  result = write(fd, buf, count);
   if(result == -1)
   {
    return written;
