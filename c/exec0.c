@@ -219,9 +219,9 @@ size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
 clean_exit:
  /*\
  Note that "writev2" must return to restore the iovec array, so a longjmp from
- a signal handler will misbehave in some cases. I cowardly take refuge in the
- fact that the "writev" function is not async-signal-safe anyway, and therefore
- "writev2" does not lose any portable guarantees versus "writev".
+ a signal handler will get a mangled iovec array in some cases. I cowardly take
+ refuge in the fact that the "writev" function is not async-signal-safe anyway,
+ and therefore "writev2" does not lose any portable guarantees versus "writev".
  \*/
  iovec_unskip(changed_iovec, changed_iovec_offset);
  return written;
