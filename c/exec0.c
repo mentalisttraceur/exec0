@@ -167,13 +167,13 @@ size_t write2(int fd, void const * buf, size_t count)
 static
 size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
 {
- size_t written;
  ssize_t result;
  ssize_t skip;
- struct iovec * changed_iovec = iov;
- size_t changed_iovec_offset = 0;
+ size_t written;
+ size_t changed_iovec_offset;
+ struct iovec * changed_iovec;
  
- for(written = 0;;)
+ for(written = 0, changed_iovec = iov, changed_iovec_offset = 0;;)
  {
   result = writev(fd, iov, iovcnt);
   if(result == -1)
