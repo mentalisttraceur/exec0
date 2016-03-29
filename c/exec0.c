@@ -20,7 +20,8 @@ The write (and writev?) syscall(s) on many "historical" systems returned 0
 where modern systems return -1 with errno set to EAGAIN/EWOULDBLOCK. This code
 handles both, but when compiling on a system with modern write semantics, you
 can define the preprocessor macro EXPECT_POSIX_WRITE_SEMANTICS - this will save
-a couple of branches in the final machine code, for what little that's worth.
+a couple of branches and one brief temporary variable, in theory, in the final
+machine code, for what little that's worth.
 \*/
 
 /* This must be defined for limits.h to include SSIZE_MAX */
@@ -103,69 +104,64 @@ void iovec_skip(struct iovec * iov, size_t offset)
  iov->iov_len -= offset;
 }
 
-static
-void iovec_unskip(struct iovec * iov, size_t offset)
-{
- iov->iov_base = (char * )iov->iov_base - offset;
- iov->iov_len += offset;
-}
-
 
 /*\
 write() and writev() have an annoying issue: if they succeed partially then hit
 an error, they don't communicate the error reason to the caller. We have to
-call them again to get it. So we have wrappers around write() and writev(),
-called "write2()" and "writev2()", which would behave more properly.
+call them again to get it. So we have wrappers around write() and writev() to
+call them in a loop until we hit an error. This is just one syscall in most
+full-success or full-failure cases, and likely to be just two syscalls for a
+partial-success-then-error (or partial-success-then-succeed-the-rest-of-the-way
+situation). It's conceivable we'd loop more times in case we get a series of
+partial writes - if they're that brief of transient errors, this doesn't bother
+me. If they're any longer, I don't want to add the sleep-and-retry logic.
 
-Ideally "write2()" and "writev2()" would exist as actual syscalls with separate
-return values (using two registers or other architecture-appropriate method)
-for the number of bytes written and the encountered error's number, if any.
-The kernel knows why the write only succeeded partially, so it's a shame to do
-two syscalls worth of overhead just to find out the error reason. I imagine a
-libc wrapper would return the former, and set errno with the latter.
+Most write errors are cause to abort, except EINTR: if paused and resumed a
+process could get this error, even if we're not catching any signals, and it
+seems like the correct thing to do is restart writing properly.
 
-The following two functions are wrappers which get that behavior by calling
-write()/writev() in a loop. It's noteworthy that most of the time, this will
-only call the syscall once in a successful case, once for errors that are
-immediately apparent (e.g. bad file descriptor), and only twice for most other
-errors. Even transient errors (e.g. full pipe) are not likely to pass in the
-time window between two iterations of this loop, and if they do, it's arguably
-acceptable to interpret that as there not having been any error at all.
+EAGAIN/EWOULDBLOCK, on the other hand, is _not_ an appropriate error to retry
+on for our usecase: if we receive a non-blocking file descriptor, it's
+presumably the invoker's intention that we _do not block_ when writing to that
+FD, but retrying/polling on the FD would just be effectively the same thing as
+blocking.
 \*/
 
 static
-size_t write2(int fd, void const * buf, size_t count)
+void writeUntilDoneOrError(int fd, void const * buf, size_t count)
 {
- size_t written;
- ssize_t result;
- 
- for(written = 0;; buf = (char * )buf + result)
+ for(;;)
  {
-  result = write(fd, buf, count);
+  ssize_t result = write(fd, buf, count);
   if(result == -1)
   {
-   return written;
+   if(errno == EINTR)
+   {
+    errno = 0;
+    continue;
+   }
+   return;
   }
  #ifndef EXPECT_POSIX_WRITE_SEMANTICS
   if(!result && count)
   {
    errno = EAGAIN;
-   return written;
+   return;
   }
  #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
+  
   count -= result;
-  written += result;
   if(!count)
   {
-   return written;
+   return;
   }
+  buf = (char * )buf + result;
  }
- /* We should never reach here. */
+ /* Should not be reached. */
 }
 
-
 static
-size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
+void writevUntilDoneOrError(int fd, struct iovec * iov, unsigned int iovcnt)
 {
 #ifndef EXPECT_POSIX_WRITE_SEMANTICS
  struct
@@ -177,18 +173,19 @@ size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
   ssize_t skip;
  }
  write;
- size_t written;
- size_t changed_iovec_offset;
- struct iovec * changed_iovec;
  
- for(written = 0, changed_iovec = iov, changed_iovec_offset = 0;;)
+ for(;;)
  {
   write.result = writev(fd, iov, iovcnt);
   if(write.result == -1)
   {
-   goto clean_return;
+   if(errno == EINTR)
+   {
+    errno = 0;
+    continue;
+   }
+   return;
   }
-  written += write.result;
   /*\
   All writev implementations I know of error out if "iovcnt" == 0. If there is
   an implementation which accepts it, and if this program ever changed to call
@@ -205,7 +202,7 @@ size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
    iovcnt -= 1;
    if(!iovcnt)
    {
-    goto clean_return;
+    return;
    }
   }
  #ifndef EXPECT_POSIX_WRITE_SEMANTICS
@@ -213,31 +210,12 @@ size_t writev2(int fd, struct iovec * iov, unsigned int iovcnt)
   {
    /* If nothing was written and the above loop didn't exit the function: */
    errno = EAGAIN;
-   goto clean_return;
+   return;
   }
  #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
-  
-  iovec_unskip(changed_iovec, changed_iovec_offset);
-  if(changed_iovec == iov)
-  {
-   changed_iovec_offset += write.skip;
-  }
-  else
-  {
-   changed_iovec_offset = write.skip;
-   changed_iovec = iov;
-  }
-  iovec_skip(iov, changed_iovec_offset);
+  iovec_skip(iov, write.skip);
  }
-clean_return:
- /*\
- Note that "writev2" must return to restore the iovec array, so a longjmp from
- a signal handler will get a mangled iovec array in some cases. I cowardly take
- refuge in the fact that the "writev" function is not async-signal-safe anyway,
- and therefore "writev2" does not lose any portable guarantees versus "writev".
- \*/
- iovec_unskip(changed_iovec, changed_iovec_offset);
- return written;
+ /* Should not be reached. */
 }
 
 
@@ -299,8 +277,8 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
   /* errno is set when we get here: resetting it makes it meaningful later: */
   errno = 0;
   
-  if(writev(STDERR_FILENO, msg, part.count) != -1
-  && (part.count < msgPartsToWrite || len.remainder))
+  writevUntilDoneOrError(STDERR_FILENO, msg, part.count);
+  if(!errno && (part.count < msgPartsToWrite || len.remainder))
   {
    /*\
    If writev succeeded _and_ we have something left (should only happen on the
@@ -349,27 +327,9 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
 }
 
 
-/* Write to stdout, if that fails write error to stderr. */
 static
-int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
+int error_stdout(char * arg0)
 {
- for(;;)
- {
-  size_t result = write2(STDOUT_FILENO, buf, len);
-  if(!errno)
-  {
-   /* Successfully wrote to stdout, just return. */
-   return EXIT_SUCCESS;
-  }
-  if(errno != EINTR)
-  {
-   break;
-  }
-  errno = 0;
-  len -= result;
-  buf += result;
- }
- 
  /* Write failed: get error string, then compose and print error message. */
  char * errStr = strerror(errno);
  struct iovec errMsg[4];
@@ -380,7 +340,7 @@ int writeStdOut_reportIfError(char const * buf, size_t len, char * arg0)
  errMsg[2].iov_len = strlen(errStr);
  errMsg[3].iov_base = (void * )&newline;
  errMsg[3].iov_len = 1;
- writeErrorMsgOfAnySize(errMsg, 4);
+ writevUntilDoneOrError(STDERR_FILENO, errMsg, 4);
  return EXIT_FAILURE;
 }
 
@@ -399,7 +359,7 @@ int error_noArguments(char * arg0)
  errMsg[3] = errMsg[0];
  errMsg[4].iov_base = (void * )helpText;
  errMsg[4].iov_len = sizeof(helpText) - 1;
- writeErrorMsgOfAnySize(errMsg, 5);
+ writevUntilDoneOrError(STDERR_FILENO, errMsg, 5);
  return EXIT_FAILURE;
 }
 
@@ -420,8 +380,42 @@ int error_execFailure(char * command, char * arg0)
  errMsg[4].iov_len = strlen(errStr);
  errMsg[5].iov_base = (void * )&newline;
  errMsg[5].iov_len = 1;
- writeErrorMsgOfAnySize(errMsg, 6);
+ writevUntilDoneOrError(STDERR_FILENO, errMsg, 6);
  return EXIT_FAILURE;
+}
+
+
+/* Write help message to stdout, if that fails write error to stderr. */
+static
+int print_help(char * arg0)
+{
+ {
+  struct iovec helpMsg[3];
+  helpMsg[0].iov_base = (void * )helpTextPrefix;
+  helpMsg[0].iov_len = sizeof(helpTextPrefix) - 1;
+  helpMsg[1] = basename(arg0);
+  helpMsg[2].iov_base = (void * )helpText;
+  helpMsg[2].iov_len = sizeof(helpText) - 1;
+  writevUntilDoneOrError(STDOUT_FILENO, helpMsg, 3);
+ }
+ if(errno)
+ {
+  return error_stdout(arg0);
+ }
+ return EXIT_SUCCESS;
+}
+
+
+/* Write version string to stdout, if that fails write error to stderr. */
+static
+int print_version(char * arg0)
+{
+ writeUntilDoneOrError(STDOUT_FILENO, versionText, sizeof(versionText) - 1);
+ if(errno)
+ {
+  return error_stdout(arg0);
+ }
+ return EXIT_SUCCESS;
 }
 
 
@@ -453,12 +447,12 @@ int main(int argc, char * * argv)
  /* ..the help-printing option: */
  if(!strcmp(arg, "-h") || !strcmp(arg, "--help"))
  {
-  return writeStdOut_reportIfError(helpText, sizeof(helpText) -1, arg0);
+  return print_help(arg0);
  }
  /* .. the version printing option: */
  if(!strcmp(arg, "-V") || !strcmp(arg, "--version"))
  {
-  return writeStdOut_reportIfError(versionText, sizeof(versionText) -1, arg0);
+  return print_version(arg0);
  }
  
  /* .. or arg is the "end of options" argument: */
