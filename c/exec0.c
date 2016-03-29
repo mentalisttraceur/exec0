@@ -153,8 +153,9 @@ size_t write2(int fd, void const * buf, size_t count)
    return written;
   }
  #endif /* EXPECT_POSIX_WRITE_SEMANTICS */
+  count -= result;
   written += result;
-  if(written == count)
+  if(!count)
   {
    return written;
   }
