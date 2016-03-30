@@ -237,7 +237,7 @@ code, but we already set it to indicate failure if we're printing an error, so
 that seems to be low-value).
 \*/
 static
-void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
+void writevAnySize(int fd, struct iovec * msg, unsigned int msgPartsToWrite)
 {
  /*\
  We really only need two temporary variables: they have semantically different
@@ -277,7 +277,7 @@ void writeErrorMsgOfAnySize(struct iovec * msg, unsigned int msgPartsToWrite)
   /* errno is set when we get here: resetting it makes it meaningful later: */
   errno = 0;
   
-  writevUntilDoneOrError(STDERR_FILENO, msg, part.count);
+  writevUntilDoneOrError(fd, msg, part.count);
   if(!errno && (part.count < msgPartsToWrite || len.remainder))
   {
    /*\
