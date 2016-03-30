@@ -128,7 +128,7 @@ blocking.
 \*/
 
 static
-void writeUntilDoneOrError(int fd, void const * buf, size_t count)
+void write_untilDoneOrError(int fd, void const * buf, size_t count)
 {
  for(;;)
  {
@@ -161,7 +161,7 @@ void writeUntilDoneOrError(int fd, void const * buf, size_t count)
 }
 
 static
-void writevUntilDoneOrError(int fd, struct iovec * iov, unsigned int iovcnt)
+void writev_untilDoneOrError(int fd, struct iovec * iov, unsigned int iovcnt)
 {
 #ifndef EXPECT_POSIX_WRITE_SEMANTICS
  struct
@@ -237,7 +237,8 @@ code, but we already set it to indicate failure if we're printing an error, so
 that seems to be low-value).
 \*/
 static
-void writevAnySize(int fd, struct iovec * msg, unsigned int msgPartsToWrite)
+void writev_untilDoneOrError_anySize
+(int fd, struct iovec * msg, unsigned int msgPartsToWrite)
 {
  /*\
  We really only need two temporary variables: they have semantically different
@@ -277,7 +278,7 @@ void writevAnySize(int fd, struct iovec * msg, unsigned int msgPartsToWrite)
   /* errno is set when we get here: resetting it makes it meaningful later: */
   errno = 0;
   
-  writevUntilDoneOrError(fd, msg, part.count);
+  writev_untilDoneOrError(fd, msg, part.count);
   if(!errno && (part.count < msgPartsToWrite || len.remainder))
   {
    /*\
@@ -340,7 +341,7 @@ int error_stdout(char * arg0)
  errMsg[2].iov_len = strlen(errStr);
  errMsg[3].iov_base = (void * )&newline;
  errMsg[3].iov_len = 1;
- writevUntilDoneOrError(STDERR_FILENO, errMsg, 4);
+ writev_untilDoneOrError(STDERR_FILENO, errMsg, 4);
  return EXIT_FAILURE;
 }
 
@@ -359,7 +360,7 @@ int error_noArguments(char * arg0)
  errMsg[3] = errMsg[0];
  errMsg[4].iov_base = (void * )helpText;
  errMsg[4].iov_len = sizeof(helpText) - 1;
- writevUntilDoneOrError(STDERR_FILENO, errMsg, 5);
+ writev_untilDoneOrError(STDERR_FILENO, errMsg, 5);
  return EXIT_FAILURE;
 }
 
@@ -380,7 +381,7 @@ int error_execFailure(char * command, char * arg0)
  errMsg[4].iov_len = strlen(errStr);
  errMsg[5].iov_base = (void * )&newline;
  errMsg[5].iov_len = 1;
- writevUntilDoneOrError(STDERR_FILENO, errMsg, 6);
+ writev_untilDoneOrError(STDERR_FILENO, errMsg, 6);
  return EXIT_FAILURE;
 }
 
@@ -396,7 +397,7 @@ int print_help(char * arg0)
   helpMsg[1] = basename(arg0);
   helpMsg[2].iov_base = (void * )helpText;
   helpMsg[2].iov_len = sizeof(helpText) - 1;
-  writevUntilDoneOrError(STDOUT_FILENO, helpMsg, 3);
+  writev_untilDoneOrError(STDOUT_FILENO, helpMsg, 3);
  }
  if(errno)
  {
@@ -410,7 +411,7 @@ int print_help(char * arg0)
 static
 int print_version(char * arg0)
 {
- writeUntilDoneOrError(STDOUT_FILENO, versionText, sizeof(versionText) - 1);
+ write_untilDoneOrError(STDOUT_FILENO, versionText, sizeof(versionText) - 1);
  if(errno)
  {
   return error_stdout(arg0);
