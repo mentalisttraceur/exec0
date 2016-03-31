@@ -501,8 +501,9 @@ int main(int argc, char * * argv)
   }
   
   /*\
-  ..in which case, we just skip it, and use the next argument as if nothing
-  happened. This allows unambiguous use of command names starting with '-'.
+  ..and if it is the "end of options" argument, we just skip it, and use the
+  next argument as if nothing happened. This allows unambiguous use of command
+  names starting with '-'.
   \*/
   argv += 1;
   arg = *argv;
