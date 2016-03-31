@@ -28,10 +28,10 @@ machine code, for what little that's worth.
 On sane systems, the error messages will always be small enough to fit in a
 single writev call: I've never seen ARG_MAX + (longest string associated with
 errno) + (longest error message content in my programs) come even close to
-SSIZE_T. The code handles this case correctly and with little runtime overhead,
-but if you're confident it won't matter, you can define the preprocessor macro
-EXPECT_SENSIBLE_MESSAGE_SIZES - this will save you small but somewhat complex
-additional code wrapping around writev which handles such a case.
+SSIZE_MAX. The code handles this case correctly and with little runtime
+overhead, but if you're confident it won't matter, you can define the
+preprocessor macro EXPECT_SENSIBLE_MESSAGE_SIZES - this will save you small but
+somewhat complex additional code wrapping around writev from being compiled-in.
 \*/
 #ifdef EXPECT_SENSIBLE_MESSAGE_SIZES
 #define writev_wrapper_m writev_untilDoneOrError
