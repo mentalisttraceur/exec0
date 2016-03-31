@@ -1,6 +1,6 @@
 /*****************************************************************************\
  * exec0 1.0.0 - C implementation
- * Copyright (C) 2016-03-23 Alexander Kozhevnikov <mentalisttraceur@gmail.com>
+ * Copyright (C) 2016-03-31 Alexander Kozhevnikov <mentalisttraceur@gmail.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
