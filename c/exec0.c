@@ -56,9 +56,10 @@ somewhat complex additional code wrapping around writev from being compiled-in.
 
 
 char const versionText[] = "1.0.0\n";
-char const stdoutWritingError[] = ": error writing to stdout: ";
-char const colonSpaceSplit[] = ": ";
 char const noArgumentsGiven[] = ": need command or option argument\n";
+char const stdoutWritingError[] = ": error writing to stdout: ";
+char const unrecognizedOption[] = ": unrecognized option: ";
+char const colonSpaceSplit[] = ": ";
 char const newline = '\n';
 
 char const helpTextPrefix[] = "Usage: ";
@@ -403,6 +404,22 @@ int error_execFailure(char * command, char * arg0)
 }
 
 
+static
+int error_unrecognizedOption(char * option, char * arg0)
+{
+ struct iovec errMsg[4];
+ errMsg[0] = basename(arg0);
+ errMsg[1].iov_base = (void * )unrecognizedOption;
+ errMsg[1].iov_len = sizeof(unrecognizedOption) - 1;
+ errMsg[2].iov_base = option;
+ errMsg[2].iov_len = strlen(option);
+ errMsg[3].iov_base = (void * )&newline;
+ errMsg[3].iov_len = 1;
+ writev_wrapper_m(STDERR_FILENO, errMsg, 4);
+ return EXIT_FAILURE;
+}
+
+
 /* Write help message to stdout, if that fails write error to stderr. */
 static
 int print_help(char * arg0)
@@ -462,20 +479,27 @@ int main(int argc, char * * argv)
  /* And inspect the next argument, which is either... */
  arg = *argv;
  
- /* ..the help-printing option: */
- if(!strcmp(arg, "-h") || !strcmp(arg, "--help"))
+ if(*arg == '-')
  {
-  return print_help(arg0);
- }
- /* .. the version printing option: */
- if(!strcmp(arg, "-V") || !strcmp(arg, "--version"))
- {
-  return print_version(arg0);
- }
- 
- /* .. or arg is the "end of options" argument: */
- if(!strcmp(arg, "--"))
- {
+  arg += 1;
+  /* ..the help-printing option: */
+  if(!strcmp(arg, "-help") || !strcmp(arg, "h"))
+  {
+   return print_help(arg0);
+  }
+  /* .. the version printing option: */
+  if(!strcmp(arg, "-version") || !strcmp(arg, "V"))
+  {
+   return print_version(arg0);
+  }
+  
+  /* if arg isn't one of the above and is NOT the "end of options" argument: */
+  if(strcmp(arg, "-"))
+  {
+   /* Print an error message for unrecognized options: */
+   return error_unrecognizedOption(arg - 1, arg0);
+  }
+  
   /*\
   ..in which case, we just skip it, and use the next argument as if nothing
   happened. This allows unambiguous use of command names starting with '-'.
