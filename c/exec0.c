@@ -24,6 +24,21 @@ a couple of branches and one brief temporary variable, in theory, in the final
 machine code, for what little that's worth.
 \*/
 
+/*\
+On sane systems, the error messages will always be small enough to fit in a
+single writev call: I've never seen ARG_MAX + (longest string associated with
+errno) + (longest error message content in my programs) come even close to
+SSIZE_T. The code handles this case correctly and with little runtime overhead,
+but if you're confident it won't matter, you can define the preprocessor macro
+EXPECT_SENSIBLE_MESSAGE_SIZES - this will save you small but somewhat complex
+additional code wrapping around writev which handles such a case.
+\*/
+#ifdef EXPECT_SENSIBLE_MESSAGE_SIZES
+#define writev_wrapper_m writev_untilDoneOrError
+#else
+#define writev_wrapper_m writev_untilDoneOrError_anySize
+#endif
+
 /* This must be defined for limits.h to include SSIZE_MAX */
 #define _POSIX_C_SOURCE 1
 
@@ -223,12 +238,12 @@ void writev_untilDoneOrError(int fd, struct iovec * iov, unsigned int iovcnt)
 This function is mainly there to account for the extremely unlikely possibility
 that an error message is too big for SSIZE_MAX. This should never really happen
 unless somehow the built-in error strings plus the command to invoke end up
-spilling past SSIZE_MAX chars in length - which is huge. I'm not even sure if a
-command line can be that long on most (any?) systems, given that the length of
-a command line and environment passable to the execve(2) syscall has a length
-limit too. Basically, it depends on if ARG_MAX is close to or bigger than
-SSIZE_MAX. Anyway, I strongly believe in accounting for possible problems
-unless there's sound evidence that it's definitely unnecessary.
+spilling past SSIZE_MAX chars in length - which is huge on most systems. I'm
+fairly confident a command line can't be that long on most (any?) systems,
+given that the length of a command line and environment passable to the
+execve(2) syscall has a length limit too. Basically, it depends on if ARG_MAX
+is close to or bigger than SSIZE_MAX, enough for the rest of the message being
+printed to spill past it.
 
 No response to errors (besides the EINVAL due to too large of a write chunk) is
 done because if writing the error message fails, what's next? Try to report an
@@ -236,6 +251,7 @@ error about how we can't report errors? (We could exit with a different status
 code, but we already set it to indicate failure if we're printing an error, so
 that seems to be low-value).
 \*/
+#ifndef EXPECT_SENSIBLE_MESSAGE_SIZES
 static
 void writev_untilDoneOrError_anySize
 (int fd, struct iovec * msg, unsigned int msgPartsToWrite)
@@ -326,6 +342,7 @@ void writev_untilDoneOrError_anySize
  }
  while(0);
 }
+#endif /* EXPECT_SENSIBLE_MESSAGE_SIZES */
 
 
 static
@@ -341,7 +358,7 @@ int error_stdout(char * arg0)
  errMsg[2].iov_len = strlen(errStr);
  errMsg[3].iov_base = (void * )&newline;
  errMsg[3].iov_len = 1;
- writev_untilDoneOrError(STDERR_FILENO, errMsg, 4);
+ writev_wrapper_m(STDERR_FILENO, errMsg, 4);
  return EXIT_FAILURE;
 }
 
@@ -360,7 +377,7 @@ int error_noArguments(char * arg0)
  errMsg[3] = errMsg[0];
  errMsg[4].iov_base = (void * )helpText;
  errMsg[4].iov_len = sizeof(helpText) - 1;
- writev_untilDoneOrError(STDERR_FILENO, errMsg, 5);
+ writev_wrapper_m(STDERR_FILENO, errMsg, 5);
  return EXIT_FAILURE;
 }
 
@@ -381,7 +398,7 @@ int error_execFailure(char * command, char * arg0)
  errMsg[4].iov_len = strlen(errStr);
  errMsg[5].iov_base = (void * )&newline;
  errMsg[5].iov_len = 1;
- writev_untilDoneOrError(STDERR_FILENO, errMsg, 6);
+ writev_wrapper_m(STDERR_FILENO, errMsg, 6);
  return EXIT_FAILURE;
 }
 
@@ -397,7 +414,7 @@ int print_help(char * arg0)
   helpMsg[1] = basename(arg0);
   helpMsg[2].iov_base = (void * )helpText;
   helpMsg[2].iov_len = sizeof(helpText) - 1;
-  writev_untilDoneOrError(STDOUT_FILENO, helpMsg, 3);
+  writev_wrapper_m(STDOUT_FILENO, helpMsg, 3);
  }
  if(errno)
  {
