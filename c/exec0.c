@@ -385,7 +385,7 @@ int error_noArguments(char * arg0)
 
 /* The action taken when executing the given command fails. */
 static
-int error_execFailure(char * command, char * arg0)
+int error_exec(char * command, char * arg0)
 {
  char * errStr = strerror(errno);
  struct iovec errMsg[6];
@@ -522,5 +522,5 @@ int main(int argc, char * * argv)
  execvp(arg, argv);
  /* If we're here, execvp failed to even execute the command. */
  
- return error_execFailure(arg, arg0);
+ return error_exec(arg, arg0);
 }
