@@ -55,7 +55,7 @@ somewhat complex additional code wrapping around writev from being compiled-in.
 #include <sys/uio.h> /* struct iovec, writev */
 
 
-char const versionText[] = "1.0.0\n";
+char const versionText[] = "exec0 1.0.0\n";
 char const noArgumentsGiven[] = ": need command or option argument\n";
 char const stdoutWritingError[] = ": error writing to stdout: ";
 char const unrecognizedOption[] = ": unrecognized option: ";
