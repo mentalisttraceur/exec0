@@ -28,10 +28,11 @@ ability to control commands which change behavior based on the zeroth argument,
 into easy command-line reach.
 
 Unfortunately, several languages' functionality does not allow you to invoke a
-command with with _no_ arguments, and in the worst case I know of, it's not
-possible to invoke a command with a zero-length zeroth argument either. But
-those are pedantic corner-cases: the majority of the benefits apply to every
-`exec0` implementation.
+command with with _no_ arguments, and a couple of operating systems do the same
+thing, and in the worst case I know of, it's not possible to invoke a command
+with a zero-length zeroth argument either. But those are pedantic corner-cases:
+the majority of the benefits apply to every `exec0` implementation on every
+platform.
 
 
 
