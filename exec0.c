@@ -73,7 +73,7 @@ int error_unrecognized_option(char * option, char * arg0)
 
 
 static
-int error_exec(char * command, char * arg0)
+int error_executing_command(char * command, char * arg0)
 {
     if(fputs(arg0, stderr) == EOF)
     {
@@ -180,5 +180,5 @@ int main(int argc, char * * argv)
     execvp(arg, argv);
     /* If we're here, execvp failed to even execute the command. */
  
-    return error_exec(arg, arg0);
+    return error_executing_command(arg, arg0);
 }
