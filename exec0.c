@@ -55,15 +55,9 @@ int error_no_arguments(char * arg0)
 static
 int error_unrecognized_option(char * option, char * arg0)
 {
-    if(fputs(arg0, stderr) == EOF)
-    {
-        return EXIT_FAILURE;
-    }
-    if(fputs(unrecognized_option, stderr) == EOF)
-    {
-        return EXIT_FAILURE;
-    }
-    if(fputs(option, stderr) == EOF)
+    if(fputs(arg0, stderr) == EOF
+    || fputs(unrecognized_option, stderr) == EOF
+    || fputs(option, stderr) == EOF)
     {
         return EXIT_FAILURE;
     }
@@ -75,11 +69,8 @@ int error_unrecognized_option(char * option, char * arg0)
 static
 int error_executing_command(char * command, char * arg0)
 {
-    if(fputs(arg0, stderr) == EOF)
-    {
-        return EXIT_FAILURE;
-    }
-    if(fputs(colon_space, stderr) == EOF)
+    if(fputs(arg0, stderr) == EOF
+    || fputs(colon_space, stderr) == EOF)
     {
         return EXIT_FAILURE;
     }
