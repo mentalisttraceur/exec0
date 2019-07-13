@@ -124,7 +124,7 @@ int main(int argc, char * * argv)
 
     /*\
     Shift argv to not include this command's zeroth argument,
-    because it will not be passed on to the child process.
+    because it will not be passed on to the executed command.
     \*/
     argv += 1;
 
