@@ -159,7 +159,7 @@ int main(int argc, char * * argv)
         }
     }
 
-    /* ..the command to execute should be in `arg` at this point. */
+    /* The command to execute should be in `arg` at this point. */
 
     /*\
     Shift argv to not include the command to execute, because that
