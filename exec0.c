@@ -168,7 +168,7 @@ int main(int argc, char * * argv)
     argv += 1;
 
     execvp(arg, argv);
-    /* If we're here, execvp failed to even execute the command. */
+    /* If we're here, execvp failed to execute the command. */
 
     return error_executing_command(arg, arg0);
 }
