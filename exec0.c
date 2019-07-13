@@ -26,7 +26,6 @@ char const version_text[] = "exec0 1.1.0\n";
 char const no_arguments_given[] = ": need command or option argument\n";
 char const unrecognized_option[] = ": unrecognized option: ";
 char const colon_space[] = ": ";
-char const newline = '\n';
 
 char const help_text_prefix[] = "Usage: ";
 char const help_text[] =
@@ -111,7 +110,7 @@ int main(int argc, char * * argv)
 {
     char * arg;
     char * arg0 = *argv;
- 
+
     /* Need at least one argument (two, counting argv[0]): */
     if(argc < 2)
     {
@@ -122,13 +121,13 @@ int main(int argc, char * * argv)
         }
         return error_no_arguments(arg0);
     }
- 
+
     /* Shift argv past argv[0], to argv[1]... */
     argv += 1;
- 
+
     /* ..and inspect the next argument, which is either... */
     arg = *argv;
- 
+
     if(*arg == '-')
     {
         arg += 1;
@@ -148,7 +147,7 @@ int main(int argc, char * * argv)
         {
             return error_unrecognized_option(arg - 1, arg0);
         }
-  
+
         /*\
         ..or the "end of options" argument, in which case
         just skip it and continue the logic. This allows
@@ -162,14 +161,14 @@ int main(int argc, char * * argv)
             return error_no_arguments(arg0);
         }
     }
- 
+
     /* ..the command to actually invoke is in "arg" if we're here. */
- 
+
     /* Shift the start of argv past that argument. */
     argv += 1;
- 
+
     execvp(arg, argv);
     /* If we're here, execvp failed to even execute the command. */
- 
+
     return error_executing_command(arg, arg0);
 }
