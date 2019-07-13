@@ -114,7 +114,7 @@ int main(int argc, char * * argv)
     /* Need at least one argument (two, counting argv[0]): */
     if(argc < 2)
     {
-        /* If argc is 0, then arg0 is null: make it an empty string instead: */
+        /* Many systems allow execution without the zeroth argument: */
         if(!arg0)
         {
             arg0 = "";
@@ -122,36 +122,36 @@ int main(int argc, char * * argv)
         return error_no_arguments(arg0);
     }
 
-    /* Shift argv past argv[0], to argv[1]... */
+    /*\
+    Shift argv to not include this command's zeroth argument,
+    because it will not be passed on to the child process.
+    \*/
     argv += 1;
 
-    /* ..and inspect the next argument, which is either... */
+    /* ..and inspect the first argument: */
     arg = *argv;
 
     if(*arg == '-')
     {
         arg += 1;
-        /* ..the help-printing option: */
         if(!strcmp(arg, "-help") || !strcmp(arg, "h"))
         {
             return print_help(arg0);
         }
-        /* .. the version printing option: */
         if(!strcmp(arg, "-version") || !strcmp(arg, "V"))
         {
             return print_version(arg0);
         }
   
-        /* .. or *not* the "end of options" ("--") argument: */
+        /* If it is *not* the "end of options" ("--") argument: */
         if(strcmp(arg, "-"))
         {
             return error_unrecognized_option(arg - 1, arg0);
         }
 
         /*\
-        ..or the "end of options" argument, in which case
-        just skip it and continue the logic. This allows
-        unambiguous use of command names starting with '-'.
+        Just skip the "end of options" argument: This
+        allows executing commands starting with '-'.
         \*/
         argv += 1;
         arg = *argv;
@@ -162,9 +162,12 @@ int main(int argc, char * * argv)
         }
     }
 
-    /* ..the command to actually invoke is in "arg" if we're here. */
+    /* ..the command to execute should be in `arg` at this point. */
 
-    /* Shift the start of argv past that argument. */
+    /*\
+    Shift argv to not include the command to execute, because that
+    command's zeroth argument is supposed to be given separately.
+    \*/
     argv += 1;
 
     execvp(arg, argv);
