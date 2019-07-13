@@ -114,7 +114,7 @@ int main(int argc, char * * argv)
     /* Need at least one argument (two, counting argv[0]): */
     if(argc < 2)
     {
-        /* Many systems allow execution without the zeroth argument: */
+        /* Many systems allow execution without even the zeroth argument: */
         if(!arg0)
         {
             arg0 = "";
@@ -122,13 +122,10 @@ int main(int argc, char * * argv)
         return error_no_arguments(arg0);
     }
 
-    /*\
-    Shift argv past this command's zeroth argument, because argv
-    needs to be shifted until it is just the command to execute.
-    \*/
+    /* The goal is to shift argv until it points to the command to execute: */
     argv += 1;
 
-    /* Inspect the first argument: */
+    /* First argument is either an option (starts with '-') or a command: */
     arg = *argv;
 
     if(*arg == '-')
@@ -142,14 +139,14 @@ int main(int argc, char * * argv)
         {
             return print_version(arg0);
         }
-  
-        /* If it is *not* the "end of options" ("--") argument: */
+
+        /* If it is *not* the "end of options" ("--") "option": */
         if(strcmp(arg, "-"))
         {
             return error_unrecognized_option(arg - 1, arg0);
         }
 
-        /* Shift argv past the "end of options" argument: */
+        /* The "--" is just skipped, allowing the command to start with '-'. */
         argv += 1;
         arg = *argv;
         /* But a "--" with no arguments after it is the same as (argc < 2): */
@@ -159,12 +156,9 @@ int main(int argc, char * * argv)
         }
     }
 
-    /* The command to execute should be in `arg` at this point. */
+    /* Now arg should be the command to execute. */
 
-    /*\
-    Shift argv past the command to execute, so that
-    the next argument is used as its zeroth argument.
-    \*/
+    /* Shift argv so that the next argument is used as its zeroth argument. */
     argv += 1;
 
     execvp(arg, argv);
