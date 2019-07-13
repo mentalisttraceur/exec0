@@ -149,10 +149,7 @@ int main(int argc, char * * argv)
             return error_unrecognized_option(arg - 1, arg0);
         }
 
-        /*\
-        Just skip the "end of options" argument: This
-        allows executing commands starting with '-'.
-        \*/
+        /* Shift argv to not include the "end of options" argument: */
         argv += 1;
         arg = *argv;
         /* But a "--" with no arguments after it is the same as (argc < 2): */
