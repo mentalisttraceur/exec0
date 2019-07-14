@@ -63,10 +63,22 @@ int error_unrecognized_option(char * option, char * arg0)
 
 
 static
+int error_writing_output(char * arg0)
+{
+    if(fputs(arg0, stderr) == EOF)
+    {
+        return EXIT_FAILURE;
+    }
+    perror(": error writing output: ");
+    return EXIT_FAILURE;
+}
+
+
+static
 int error_executing_command(char * command, char * arg0)
 {
     if(fputs(arg0, stderr) == EOF
-    || fputs(": ", stderr) == EOF)
+    || fputs(": error executing command: ", stderr) == EOF)
     {
         return EXIT_FAILURE;
     }
@@ -83,8 +95,7 @@ int print_help(char * arg0)
     || fputs(help_text, stdout) == EOF
     || fflush(stdout) == EOF)
     {
-        perror(arg0);
-        return EXIT_FAILURE;
+        return error_writing_output(arg0);
     }
     return EXIT_SUCCESS;
 }
@@ -96,8 +107,7 @@ int print_version(char * arg0)
     if(fputs(version_text, stdout) == EOF
     || fflush(stdout) == EOF)
     {
-        perror(arg0);
-        return EXIT_FAILURE;
+        return error_writing_output(arg0);
     }
     return EXIT_SUCCESS;
 }
