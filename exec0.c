@@ -23,9 +23,6 @@
 
 
 char const version_text[] = "exec0 1.1.0\n";
-char const no_arguments_given[] = ": need command or option argument\n";
-char const unrecognized_option[] = ": unrecognized option: ";
-char const colon_space[] = ": ";
 
 char const help_text_prefix[] = "Usage: ";
 char const help_text[] =
@@ -46,7 +43,7 @@ int error_no_arguments(char * arg0)
     {
         return EXIT_FAILURE;
     }
-    fputs(no_arguments_given, stderr);
+    fputs(": need command or option argument\n", stderr);
     return EXIT_FAILURE;
 }
 
@@ -55,7 +52,7 @@ static
 int error_unrecognized_option(char * option, char * arg0)
 {
     if(fputs(arg0, stderr) == EOF
-    || fputs(unrecognized_option, stderr) == EOF
+    || fputs(": unrecognized option: ", stderr) == EOF
     || fputs(option, stderr) == EOF)
     {
         return EXIT_FAILURE;
@@ -69,7 +66,7 @@ static
 int error_executing_command(char * command, char * arg0)
 {
     if(fputs(arg0, stderr) == EOF
-    || fputs(colon_space, stderr) == EOF)
+    || fputs(": ", stderr) == EOF)
     {
         return EXIT_FAILURE;
     }
