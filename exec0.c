@@ -69,7 +69,7 @@ int error_writing_output(char * arg0)
     {
         return EXIT_FAILURE;
     }
-    perror(": error writing output: ");
+    perror(": error writing output");
     return EXIT_FAILURE;
 }
 
