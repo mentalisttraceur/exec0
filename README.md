@@ -1,6 +1,6 @@
 # exec0
 
-`exec0` is a small command line program which simply executes another program
+`exec0` is a small command line program which executes another program
 with the given list of arguments, with the noteworthy detail being that the
 list of arguments starts at the zeroth argument (the name that the program sees
 itself invoked as).
@@ -11,10 +11,10 @@ itself invoked as).
 
 # Why?
 
-It was born as a workaround for the fact that shell scripts generally have no
-way to execute another program with explicit control over the zeroth argument
-(and no: the `-a` option to `exec` isn't portable). A few other scripting and
-programming languages don't provide such control.
+It was born as a workaround for the fact that shell scripts generally
+have no way to execute another program with explicit control over the
+zeroth argument (the `-a` option to `exec` isn't portable). A few
+other scripting and programming languages don't provide such control.
 
 Being able to do this is useful for:
 
@@ -23,7 +23,7 @@ determine their own behavior.
 
 2. Testing programs which use the zeroth argument - many at least use it for
 printing messages, and most of those assume there is always a zeroth argument,
-failing poorly when there are literally _no_ arguments.
+failing poorly when there are literally *no* arguments.
 
 3. More creative usecases can be imagined, such as running two instances of a
 program with different zeroth arguments, so that their messages are distinct
@@ -33,14 +33,6 @@ A couple of operating systems don't allow invoking a command without the zeroth
 argument, but besides not allowing exercising that pedantic corner-case, exec0
 still provides the rest of the benefits of controlling the zeroth argument on
 those platforms too.
-
-##### A Note on Multiple Implementations
-
-Initially this project had the goal of creating multiple implementations of the
-`exec0` tool, in different programming languages. After some advice/discussion,
-it seems that this is probably of low value and not worth spending time on. If
-this is useful/valuable to you, please open an issue or send an email, and we
-can re-evaluate this.
 
 
 
@@ -59,10 +51,11 @@ of stdio.h IO, etc).
 ##### Future Plans
 
 Add native Windows support. This will require some non-trivial work since
-`CreateProcess` was designed to take a command-line string parsed into arguments, instead of just an array of arguments, and `WriteFileGather` is
+`CreateProcess` was designed to take a command-line string parsed into
+arguments, instead of just an array of arguments, and `WriteFileGather` is
 asynchronous (sometimes in practice, always in semantics/syntax), so they're
 not strict drop-in replacements. And if I do that, I may also replace `execvp`
-to a lower-level implementation with a manual `PATH` search and `execve`
+to a lower-level implementation with a manual `PATH` search and `execve`.
 Anyway, I don't know how soon the Windows support will get done: until then it
 should work fine with either MinGW or Cygwin, as far as I know.
 
@@ -85,7 +78,7 @@ Other useful invocations are:
     exec0 --version
 
 You can replace `--help` with the short option `-h`, and `--version` with the
-short option `-V` (note that's a _capital_ V, **not** lowercase v), but note
+short option `-V` (note that's a *capital* V, **not** lowercase v), but note
 that the short versions of options are not future-safe (a future change might
 repurpose the short, single-letter options, whereas the long options are part
 of the stable API, so use the long options in scripts).
@@ -135,7 +128,7 @@ time no specific behavior is promised. As a general trend, the PATH is searched
 for the command given, unless the command given already contains the system's
 path separator (e.g. `/` on *nix). No behavior is currently promised if `exec0`
 would do a PATH search but PATH is unset, though more concrete behavior might
-be specified.
+be specified in the future.
 
 As much as possible, `exec0` will pass all process state to the executed
 program without any alterations.
@@ -164,18 +157,18 @@ The output of the "version" option **is** part of the stable API. Currently
 `exec0` uses [Semantic Versioning 2.0.0](http://semver.org/spec/v2.0.0.html)
 for its version numbers, so the output contains the semver version number.
 
-Note that the output also contains the name of the program, `exec0`, so that if
-it's installed under a different name, you know what it is and _where it came
-from_ (this means that I'd appreciate it if other implementations/projects not
+Note that the output also contains the name of the program, `exec0`, so that
+even if it's installed under a different name, you know it is `exec0`.
+(this means that I'd appreciate it if other implementations/projects not
 part of this repo that might be installed as `exec0` used some other string
 instead, unless you were using the name first or become much more widely used).
 
-You are guaranteed that the _first_ word of the _first_ line of version output
-is the name of the project (in this case, `exec0`), and the _second_ word of
-the _first_ line of the output is the semver version number.
+You are guaranteed that the *first* word of the *first* line of version output
+is the name of the project (in this case, `exec0`), and the *second* word of
+the *first* line of the output is the semver version number.
 
 Future-safe scripts should not assume that the current output contents will be
-the _only_ output. A future change may add additional version information to
+the *only* output. A future change may add additional version information to
 the output. See the examples section for how you can parse the version output
 in a future-safe way.
 
@@ -189,15 +182,20 @@ in a future-safe way.
 
 ### Executing Other Commands
 
-Execute `bash` as an interactive, "login" POSIX-y `sh`:
+Execute `bash` as an interactive, "login" shell`:
+
+    exec0 bash -bash -i
+
+The program `bash` will be looked up in the `PATH` and will see `argv[0]` as
+`-bassh`, and `argv[1]` as `-i`. (The `-` as the first character of the
+zeroth argument tells `bash` that it is a login shell.)
+
+Execute `bash` as an interactive *POSIX* shell:
 
     exec0 bash -sh -i
 
-The program `bash` will be looked up in the `PATH` and will see `argv[0]` as
-`-sh`, and `argv[1]` as `-i`. (The `-` as the first character of the zeroth
-argument tells `bash` that it is a login shell, and the rest of the name being
-just `sh` makes it work more like a POSIX shell.)
-
+Same as the last example, except `argv[0]` is `sh` instead of `-bash`
+(when `bash` is invoked as `sh`, it conforms more to POSIX).
 
 
 ### Extracting Version Info
