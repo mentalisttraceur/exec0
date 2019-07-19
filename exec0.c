@@ -28,7 +28,7 @@ char const help_text_prefix[] = "Usage: ";
 char const help_text[] =
     " OPTION|COMMAND [NAME [ARGUMENT]...]\n"
     "\n"
-    "Executes a command, controlling all arguments passed to it, including\n"
+    "Execute a command, controlling all arguments passed to it, including\n"
     "the name the command sees itself invoked as (the \"zeroth\" argument).\n"
     "\n"
     "  -h, --help    Print this help text and exit.\n"
