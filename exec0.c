@@ -48,10 +48,10 @@ int error_no_arguments(char * arg0)
 
 
 static
-int error_unrecognized_option(char * option, char * arg0)
+int error_bad_option(char * option, char * arg0)
 {
     if(fputs(arg0, stderr) != EOF
-    && fputs(": unrecognized option: ", stderr) != EOF
+    && fputs(": bad option: ", stderr) != EOF
     && fputs(option, stderr) != EOF)
     {
         fputc('\n', stderr);
@@ -146,7 +146,7 @@ int main(int argc, char * * argv)
         /* If it is *not* the "end of options" ("--") "option": */
         if(strcmp(arg, "-"))
         {
-            return error_unrecognized_option(arg - 1, arg0);
+            return error_bad_option(arg - 1, arg0);
         }
 
         /* The "--" is just skipped, allowing the command to start with '-'. */
