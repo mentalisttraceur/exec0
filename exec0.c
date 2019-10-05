@@ -23,7 +23,7 @@
 #include <unistd.h> /* execvp */
 
 
-char const version_text[] = "exec0 1.1.0\n";
+char const version_text[] = "exec0 1.1.1\n";
 
 char const help_text_prefix[] = "Usage: ";
 char const help_text[] =
