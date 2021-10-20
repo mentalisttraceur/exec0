@@ -7,7 +7,7 @@
 #include <stdlib.h> /* EXIT_SUCCESS, EXIT_FAILURE */
 #include <string.h> /* strcmp */
 
-/* Standard UNIX/Linux (POSIX/SUSv3 base) headers */
+/* Standard UNIX/Linux (POSIX/SUS base) headers */
 #include <unistd.h> /* execvp */
 
 
