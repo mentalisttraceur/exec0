@@ -14,8 +14,8 @@
 char const version_text[] = "exec0 1.1.1\n";
 
 char const help_text[] =
-    "Execute a command with an arbitrary argument array, including the\n"
-    "\"zeroth\" argument - the name the command sees itself invoked as.\n"
+    "Execute a command with arbitrary arguments, starting from the\n"
+    "zeroth argument - the name the command sees itself invoked as.\n"
     "\n"
     "Usage:\n"
     "    exec0 <command> [<name> [<argument>]...]\n"
