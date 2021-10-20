@@ -13,15 +13,16 @@
 
 char const version_text[] = "exec0 1.1.1\n";
 
-char const help_text_prefix[] = "Usage: ";
 char const help_text[] =
-    " OPTION|COMMAND [NAME [ARGUMENT]...]\n"
+    "Execute a command with an arbitrary argument array, including the\n"
+    "\"zeroth\" argument - the name the command sees itself invoked as.\n"
     "\n"
-    "Execute a command, controlling all arguments passed to it, including\n"
-    "the name the command sees itself invoked as (the \"zeroth\" argument).\n"
+    "Usage:\n"
+    "    exec0 <command> [<name> [<argument>]...]\n"
+    "    exec0 (--help | --version)\n"
     "\n"
-    "  -h, --help    Print this help text and exit.\n"
-    "  -V, --version Print version information and exit.\n"
+    "    -h --help    show this help text\n"
+    "    -V --version show version information\n"
 ;
 
 
@@ -79,9 +80,7 @@ int error_executing_command(char * command, char * arg0)
 static
 int print_help(char * arg0)
 {
-    if(fputs(help_text_prefix, stdout) != EOF
-    && fputs(arg0, stdout) != EOF
-    && fputs(help_text, stdout) != EOF
+    if(fputs(help_text, stdout) != EOF
     && fflush(stdout) != EOF)
     {
         return EXIT_SUCCESS;
