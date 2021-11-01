@@ -80,24 +80,24 @@ int error_executing_command(char * command, char * arg0)
 static
 int print_help(char * arg0)
 {
-    if(fputs(help_text, stdout) != EOF
-    && fflush(stdout) != EOF)
+    if(fputs(help_text, stdout) == EOF
+    || fflush(stdout) == EOF)
     {
-        return EXIT_SUCCESS;
+        return error_writing_output(arg0);
     }
-    return error_writing_output(arg0);
+    return EXIT_SUCCESS;
 }
 
 
 static
 int print_version(char * arg0)
 {
-    if(fputs(version_text, stdout) != EOF
-    && fflush(stdout) != EOF)
+    if(fputs(version_text, stdout) == EOF
+    || fflush(stdout) == EOF)
     {
-        return EXIT_SUCCESS;
+        return error_writing_output(arg0);
     }
-    return error_writing_output(arg0);
+    return EXIT_SUCCESS;
 }
 
 
