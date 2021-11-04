@@ -18,7 +18,7 @@ char const help_text[] =
     "zeroth argument - the name the command sees itself invoked as.\n"
     "\n"
     "Usage:\n"
-    "    exec0 <command> [<name> [<argument>]...]\n"
+    "    exec0 [--] <command> [<name> [<argument>]...]\n"
     "    exec0 (--help | --version) [<ignored>]...\n"
     "\n"
     "    -h --help     show this help text\n"
