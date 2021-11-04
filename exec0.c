@@ -19,7 +19,7 @@ char const help_text[] =
     "\n"
     "Usage:\n"
     "    exec0 <command> [<name> [<argument>]...]\n"
-    "    exec0 (--help | --version)\n"
+    "    exec0 (--help | --version) [<ignored>]...\n"
     "\n"
     "    -h --help     show this help text\n"
     "    -V --version  show version information\n"
