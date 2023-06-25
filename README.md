@@ -48,17 +48,6 @@ It's written in my not-really-idiomatic approach to C coding, including cutting
 out all unnecessary execution overhead (e.g. using UNIX IO primitives instead
 of stdio.h IO, etc).
 
-##### Future Plans
-
-Add native Windows support. This will require some non-trivial work since
-`CreateProcess` was designed to take a command-line string parsed into
-arguments, instead of just an array of arguments, and `WriteFileGather` is
-asynchronous (sometimes in practice, always in semantics/syntax), so they're
-not strict drop-in replacements. And if I do that, I may also replace `execvp`
-to a lower-level implementation with a manual `PATH` search and `execve`.
-Anyway, I don't know how soon the Windows support will get done: until then it
-should work fine with either MinGW or Cygwin, as far as I know.
-
 
 
 
