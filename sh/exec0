@@ -1,0 +1,89 @@
+#!/bin/sh
+
+printHelp()
+{
+    printf '%s\n' \
+        "$0"' OPTION|COMMAND [NAME [ARGUMENT]...]' \
+        '' \
+        'Execute a command, specifying all arguments to pass to it, include the' \
+        'name the command sees itself invoked as (the "zeroth" argument).' \
+        '' \
+        '  -h, --help    Print this help text and exit.'
+}
+ 
+
+# This will catch cases where there are no usable arguments:
+case $#$1 in
+0 | 1--)
+    printf '%s\n' "$0": need command or option argument' 1>&2
+    printHelp 1>&2
+    exit 1
+esac
+
+case $1 in
+-h | --help)
+    printHelp
+    exit $?
+-V | --version)
+    printf 'exec0 1.0.0\n'
+    exit $?
+;;
+--)
+    shift
+esac
+# `exit $?` is used because plain `exit` doesn't corretly
+# relay the exit code of the last command on some old
+# shell versions, like early `bash` 2.*.
+
+error=
+case $1 in
+/*)
+    # Absolute pathname as command-to-invoke can be used directly.
+    cmd=$1
+    [ -f "$cmd" ] && { [ -x "$cmd" ] || error=x; } || error=f
+;;
+*/*)
+    # Other non-absolute pathnames can be resolved relative to current
+    # directory, We need an absolute pathname (but not necessarily one
+    # with the symlinks in it resolved).
+    cmd=$PWD/$1
+    # There _are_ better ways, but not many portable ones, and this
+    # way could in principle run into the maximum path length limit,
+    # but for now I'm doing this for simplicity.
+    [ -f "$cmd" ] && { [ -x "$cmd" ] || error=x; } || error=f
+;;
+*)
+    # Manual PATH search because
+    #
+    # 1. the `command -v`/`type`/`which`/`whence`/`where`
+    #    situation is historically a mess, and
+    #
+    # 2. because we don't _want_ shell builtins to match
+    #    (nor aliases and functions, if your non-interactive
+    #    shells are in # the business of sourcing those).
+    realIFS=$IFS
+    IFS=:
+    for dir in $PATH
+    do
+        error=
+        cmd=$dir/$1
+        [ -f "$cmd" ] && { [ -x "$cmd" ] || error=x; } || error=f
+    done
+    IFS=$realIFS
+esac
+
+case $error in
+f)
+    printf '%s\n' 'exec0: '"$1"': not found'
+    exit 1
+;;
+x)
+    printf '%s\n' 'exec0: '"$1"': permission denied'
+    exit 1
+esac
+shift
+
+tmpExecDir=`mktemp -dt exec0.XXXXXX` \
+&& { { sleep 1 && rm -r "$tmpExecDir"; } & } \
+&& ln -s "$cmd" "$tmpExecDir"/"$1" \
+&& PATH=$tmpExecDir:$PATH exec env PATH="$PATH" "$@"

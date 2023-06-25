@@ -1,0 +1,5 @@
+#!/usr/bin/env perl
+
+$cmd = shift @ARGV;
+exec { $cmd } @ARGV;
+die "exec0: $cmd: $!";
